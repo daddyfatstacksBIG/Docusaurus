@@ -9,9 +9,9 @@ const React = require('react');
 const fs = require('fs');
 const classNames = require('classnames');
 
-const HeaderNav = require('./nav/HeaderNav.js');
 const Head = require('./Head.js');
 
+const Header = require(`${process.cwd()}/core/Header.js`);
 const Footer = require(`${process.cwd()}/core/Footer.js`);
 const translation = require('../server/translation.js');
 const env = require('../server/env.js');
@@ -72,7 +72,7 @@ class Site extends React.Component {
           version={this.props.version}
         />
         <body className={this.props.className}>
-          <HeaderNav
+          <Header
             config={this.props.config}
             baseUrl={this.props.config.baseUrl}
             title={this.props.config.title}
