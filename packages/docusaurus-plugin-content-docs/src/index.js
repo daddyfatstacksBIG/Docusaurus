@@ -21,8 +21,8 @@ const DEFAULT_OPTIONS = {
   // TODO: Change format to array.
   sidebarPath: '', // Path to sidebar configuration for showing a list of markdown pages.
   // TODO: Settle themeing.
-  docLayoutComponent: '@theme/Doc',
-  docItemComponent: '@theme/DocBody',
+  docLayoutComponent: '@theme/DocPage',
+  docItemComponent: '@theme/DocItem',
 };
 
 class DocusaurusPluginContentDocs {
@@ -149,6 +149,10 @@ class DocusaurusPluginContentDocs {
         docsMetadata: docsMetadataPath,
       },
     });
+  }
+
+  getThemePath() {
+    return path.resolve(__dirname, './theme');
   }
 
   configureWebpack(config, isServer, {getBabelLoader, getCacheLoader}) {

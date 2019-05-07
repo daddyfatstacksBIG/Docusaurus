@@ -8,6 +8,7 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const path = require('path');
+const fs = require('fs-extra');
 const isWsl = require('is-wsl');
 const {getBabelLoader, getCacheLoader, getStyleLoaders} = require('./utils');
 
@@ -17,7 +18,6 @@ const CSS_MODULE_REGEX = /\.module\.css$/;
 module.exports = function createBaseConfig(props, isServer) {
   const {
     outDir,
-    themePath,
     siteDir,
     baseUrl,
     generatedFilesDir,
@@ -33,22 +33,23 @@ module.exports = function createBaseConfig(props, isServer) {
       chunkFilename: isProd ? '[name].[chunkhash].js' : '[name].js',
       publicPath: baseUrl,
     },
+    // Don't throw warning when asset created is over 250kb
+    performance: {
+      hints: false,
+    },
     devtool: !isProd && 'cheap-module-eval-source-map',
     resolve: {
       symlinks: true,
       alias: {
+        // https://stackoverflow.com/a/55433680/6072730
         ejs: 'ejs/ejs.min.js',
-        '@theme': themePath,
         '@site': siteDir,
-        '@build': outDir,
         '@generated': generatedFilesDir,
         '@docusaurus': path.resolve(__dirname, '../client/exports'),
       },
       modules: [
         'node_modules',
-        path.resolve(__dirname, '../../node_modules'),
-        path.resolve(siteDir, 'node_modules'),
-        path.resolve(process.cwd(), 'node_modules'),
+        path.resolve(fs.realpathSync(process.cwd()), 'node_modules'),
       ],
     },
     optimization: {

@@ -31,10 +31,18 @@ module.exports = async function load(siteDir, cliOptions = {}) {
   const context = {siteDir, generatedFilesDir, siteConfig, cliOptions};
 
   // Process presets.
-  const presetPlugins = loadPresets(context);
+  const {plugins: presetPlugins, themes: presetThemes} = loadPresets(context);
 
-  // Process plugins.
-  const pluginConfigs = [...presetPlugins, ...siteConfig.plugins];
+  // Process plugins and themes. Themes are also plugins, but they run after all
+  // the explicit plugins because they may override the resolve.alias(es)
+  // defined by the plugins.
+  const pluginConfigs = [
+    ...presetPlugins,
+    ...(siteConfig.plugins || []),
+    ...presetThemes,
+    ...(siteConfig.themes || []),
+  ];
+
   const {plugins, pluginsRouteConfigs} = await loadPlugins({
     pluginConfigs,
     context,
@@ -43,8 +51,42 @@ module.exports = async function load(siteDir, cliOptions = {}) {
   const outDir = path.resolve(siteDir, 'build');
   const {baseUrl} = siteConfig;
 
-  // Resolve theme. TBD (Experimental)
-  const themePath = loadTheme(siteDir);
+  // Default theme components that are essential and must exist in a Docusaurus app
+  // These can be overriden in plugins/ through component swizzling.
+  // However, we alias it here first as a fallback.
+  const themeFallback = path.resolve(__dirname, '../client/theme-fallback');
+  let themeAliases = await loadTheme(themeFallback);
+
+  // create theme alias from plugins
+  await Promise.all(
+    plugins.map(async plugin => {
+      if (!plugin.getThemePath) {
+        return;
+      }
+      const aliases = await loadTheme(plugin.getThemePath());
+      themeAliases = {
+        ...themeAliases,
+        ...aliases,
+      };
+    }),
+  );
+
+  // user's own theme alias override. Highest priority
+  const themePath = path.resolve(siteDir, 'theme');
+  const aliases = await loadTheme(themePath);
+  themeAliases = {
+    ...themeAliases,
+    ...aliases,
+  };
+
+  // Make a fake plugin to resolve alias theme.
+  plugins.push({
+    configureWebpack: () => ({
+      resolve: {
+        alias: themeAliases,
+      },
+    }),
+  });
 
   // Routing
   const {
@@ -81,7 +123,6 @@ ${Object.keys(registry)
     siteConfig,
     siteDir,
     outDir,
-    themePath,
     baseUrl,
     generatedFilesDir,
     routesPaths,
